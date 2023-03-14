@@ -96,7 +96,7 @@ if __name__ == "__main__":
     args = gopro_dashboard_arguments()
 
     if not ffmpeg_is_installed():
-        log("Can't start ffmpeg - is it installed?")
+        log("Can't start ffmpeg/ffprobe - is it installed?")
         exit(1)
     if not ffmpeg_libx264_is_installed():
         log("ffmpeg doesn't seem to handle libx264 files - it needs to be compiled with support for this, "

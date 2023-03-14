@@ -1,5 +1,5 @@
 import contextlib
-import dbm.ndbm
+import dbm
 import itertools
 import json
 import os
@@ -194,5 +194,5 @@ class CachingRenderer:
 
     @contextlib.contextmanager
     def open(self):
-        with dbm.ndbm.open(str(self.cache_dir.joinpath("tilecache.ndbm")), "c") as db:
+        with dbm.open(str(self.cache_dir.joinpath("tilecache.ndbm")), "c") as db:
             yield dbm_caching_renderer(self.provider, db)

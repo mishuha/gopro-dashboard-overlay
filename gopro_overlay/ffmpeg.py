@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import sys
 import contextlib
 import datetime
 import itertools
@@ -19,6 +19,27 @@ from gopro_overlay.functional import flatten
 from gopro_overlay.log import log
 from gopro_overlay.process import run, invoke
 from gopro_overlay.timeunits import Timeunit, timeunits
+
+PROGRAM_DIR = os.path.normpath(os.path.dirname(os.path.abspath(sys.argv[0])))
+bin_path = os.path.join(PROGRAM_DIR, 'bin')
+ffmpeg_path = ffprobe_path = ''
+OS = os.name
+# check OS type (win/linux) and get any suitable codec
+if OS == 'nt':
+    if subprocess.run("where /Q ffmpeg").returncode == 0:
+        ffmpeg_path = re.split('\r\n|\n|\r', subprocess.check_output("where ffmpeg").strip().decode("utf-8"))[0]
+    elif os.path.exists(os.path.join(bin_path, "ffmpeg.exe")):
+        ffmpeg_path = os.path.join(bin_path, "ffmpeg.exe")
+    if subprocess.run("where /Q ffprobe").returncode == 0:
+        ffprobe_path = re.split('\r\n|\n|\r', subprocess.check_output("where ffprobe").strip().decode("utf-8"))[0]
+    elif os.path.exists(os.path.join(bin_path, "ffprobe.exe")):
+        ffprobe_path = os.path.join(bin_path, "ffprobe.exe")
+elif OS == 'posix':
+    ffmpeg_path = re.split('\r\n|\n|\r', subprocess.check_output("which ffmpeg"))[0]
+    ffprobe_path = re.split('\r\n|\n|\r', subprocess.check_output("which ffprobe"))[0]
+else:
+    print('OS is not recognized')
+    exit(1)
 
 
 @dataclass(frozen=True)
@@ -63,7 +84,7 @@ def cut_file(input, output, start, duration):
     maps = list(itertools.chain.from_iterable(
         [["-map", f"0:{it.stream}"] for it in [streams.video, streams.audio, streams.meta] if it is not None]))
 
-    args = ["ffmpeg",
+    args = [ffmpeg_path,
             "-hide_banner",
             "-y",
             "-i", input,
@@ -93,7 +114,7 @@ def join_files(filepaths, output):
             for path in filepaths:
                 f.write(f"file '{path}\n")
 
-        args = ["ffmpeg",
+        args = [ffmpeg_path,
                 "-hide_banner",
                 "-y",
                 "-f", "concat",
@@ -110,7 +131,7 @@ def join_files(filepaths, output):
 
 def find_frame_duration(filepath, data_stream_number, invoke=invoke):
     ffprobe_output = str(invoke(
-        ["ffprobe",
+        [ffprobe_path,
          "-hide_banner",
          "-print_format", "json",
          "-show_packets",
@@ -128,7 +149,7 @@ def find_frame_duration(filepath, data_stream_number, invoke=invoke):
 
 
 def find_streams(filepath: Path, invoke=invoke, find_frame_duration=find_frame_duration, stat=os.stat) -> StreamInfo:
-    ffprobe_output = str(invoke(["ffprobe", "-hide_banner", "-print_format", "json", "-show_streams", filepath]).stdout)
+    ffprobe_output = str(invoke([ffprobe_path, "-hide_banner", "-print_format", "json", "-show_streams", filepath]).stdout)
 
     ffprobe_json = json.loads(ffprobe_output)
 
@@ -199,7 +220,7 @@ def file_meta(filepath: Path, stat=os.stat) -> FileMeta:
 def load_gpmd_from(filepath: Path):
     track = find_streams(filepath).meta.stream
     if track:
-        cmd = ["ffmpeg", "-hide_banner", '-y', '-i', filepath, '-codec', 'copy', '-map', '0:%d' % track, '-f',
+        cmd = [ffmpeg_path, "-hide_banner", '-y', '-i', filepath, '-codec', 'copy', '-map', '0:%d' % track, '-f',
                'rawvideo', "-"]
         result = run(cmd, capture_output=True, timeout=10)
         if result.returncode != 0:
@@ -210,22 +231,22 @@ def load_gpmd_from(filepath: Path):
 
 
 def ffmpeg_is_installed():
-    try:
-        invoke(["ffmpeg", "-version"])
+    if ffmpeg_path and ffprobe_path:
         return True
-    except FileNotFoundError:
+    else:
         return False
 
 
+
 def ffmpeg_libx264_is_installed():
-    output = invoke(["ffmpeg", "-v", "quiet", "-codecs"]).stdout
+    output = invoke([ffmpeg_path, "-v", "quiet", "-codecs"]).stdout
     libx264s = [x for x in output.split('\n') if "libx264" in x]
     return len(libx264s) > 0
 
 
 def load_frame(filepath: Path, at_time: Timeunit) -> Optional[bytes]:
     if filepath.exists():
-        cmd = ["ffmpeg", "-hide_banner", "-y", "-ss", str(at_time.millis() / 1000), "-i", str(filepath.absolute()), "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgba", "-"]
+        cmd = [ffmpeg_path, "-hide_banner", "-y", "-ss", str(at_time.millis() / 1000), "-i", str(filepath.absolute()), "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgba", "-"]
         log(f"Executing '{' '.join(cmd)}'")
         try:
             return run(cmd, capture_output=True).stdout
@@ -260,9 +281,8 @@ class FFMPEGOverlay:
     @contextlib.contextmanager
     def generate(self):
         cmd = flatten([
-            "ffmpeg",
-            "-hide_banner",
-            "-y",
+            ffmpeg_path,
+            "-y", # rewrite
             self.options.general,
             "-f", "rawvideo",
             "-framerate", "10.0",
@@ -308,7 +328,7 @@ class FFMPEGOverlayVideo:
         else:
             filter_extra = f",scale=-1:{self.vsize}"
         cmd = flatten([
-            "ffmpeg",
+            ffmpeg_path,
             "-y",
             self.options.general,
             self.options.input,
