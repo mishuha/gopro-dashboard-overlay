@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
-
+import re
 from gopro_overlay.common import temporary_file
 from gopro_overlay.dimensions import Dimension
 from gopro_overlay.execution import InProcessExecution
