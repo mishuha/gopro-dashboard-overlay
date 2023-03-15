@@ -35,8 +35,12 @@ if OS == 'nt':
     elif os.path.exists(os.path.join(bin_path, "ffprobe.exe")):
         ffprobe_path = os.path.join(bin_path, "ffprobe.exe")
 elif OS == 'posix':
-    ffmpeg_path = re.split('\r\n|\n|\r', subprocess.check_output("which ffmpeg"))[0]
-    ffprobe_path = re.split('\r\n|\n|\r', subprocess.check_output("which ffprobe"))[0]
+    ffmpeg_path = re.split('\r\n|\n|\r',
+                           subprocess.check_output("which ffmpeg", shell=True, stderr=subprocess.STDOUT
+                                                   ).decode("utf-8"))[0]
+    ffprobe_path = re.split('\r\n|\n|\r',
+                            subprocess.check_output("which ffprobe", shell=True, stderr=subprocess.STDOUT
+                                                    ).decode("utf-8"))[0]
 else:
     print('OS is not recognized')
     exit(1)
