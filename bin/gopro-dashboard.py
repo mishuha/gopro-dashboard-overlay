@@ -10,6 +10,7 @@ import progressbar
 
 from gopro_overlay import timeseries_process, progress_frames, gpx, fit
 from gopro_overlay.arguments import gopro_dashboard_arguments
+from gopro_overlay.buffering import SingleBuffer, DoubleBuffer
 from gopro_overlay.common import temp_file_name
 from gopro_overlay.counter import ReasonCounter
 from gopro_overlay.date_overlap import DateRange
@@ -74,7 +75,7 @@ def create_desired_layout(dimensions, layout, layout_xml: Path, include, exclude
             decorator=profiler, converters=converters
         )
     else:
-        raise ValueError(f"Unsupported layout {args.layout}")
+        raise ValueError(f"Unsupported layout {args.layout_creator}")
 
 
 def load_external(filepath: Path, units) -> Timeseries:
@@ -280,8 +281,6 @@ if __name__ == "__main__":
                 ffmpeg = FFMPEGOverlayVideo(input=inputpath, output=args.output, options=ffmpeg_options,
                                             vsize=args.output_size, overlay_size=dimensions, execution=execution)
 
-            write_timer = PoorTimer("writing to ffmpeg")
-            byte_timer = PoorTimer("image to bytes")
             draw_timer = PoorTimer("drawing frames")
 
             # Draw an overlay frame every 0.1 seconds of video
@@ -307,29 +306,26 @@ if __name__ == "__main__":
                 temperature_unit=args.units_temperature,
             )
 
-            overlay = Overlay(
-                dimensions=dimensions,
-                framemeta=frame_meta,
-                create_widgets=create_desired_layout(
-                    layout=args.layout, layout_xml=args.layout_xml,
-                    dimensions=dimensions,
-                    include=args.include, exclude=args.exclude,
-                    renderer=renderer,
-                    timeseries=frame_meta,
-                    font=font,
-                    privacy_zone=privacy_zone,
-                    profiler=profiler,
-                    converters=unit_converters
-                )
-            )
+            layout_creator = create_desired_layout(layout=args.layout, layout_xml=args.layout_xml, dimensions=dimensions, include=args.include, exclude=args.exclude, renderer=renderer, timeseries=frame_meta, font=font,
+                                                   privacy_zone=privacy_zone,
+                                                   profiler=profiler, converters=unit_converters)
+
+            overlay = Overlay(framemeta=frame_meta, create_widgets=layout_creator)
 
             try:
                 with ffmpeg.generate() as writer:
-                    for index, dt in enumerate(stepper.steps()):
-                        progress.update(index)
-                        frame = draw_timer.time(lambda: overlay.draw(dt))
-                        tobytes = byte_timer.time(lambda: frame.tobytes())
-                        write_timer.time(lambda: writer.write(tobytes))
+
+                    if args.double_buffer:
+                        log("*** NOTE: Double Buffer mode is experimental. It is believed to work fine on Linux. Please raise issues if you see it working or not-working. Thanks ***")
+                        buffer = DoubleBuffer(dimensions, writer)
+                    else:
+                        buffer = SingleBuffer(dimensions, writer)
+
+                    with buffer:
+                        for index, dt in enumerate(stepper.steps()):
+                            progress.update(index)
+                            draw_timer.time(lambda: buffer.draw(lambda frame: overlay.draw(dt, frame)))
+
                 log("Finished drawing frames. waiting for ffmpeg to catch up")
                 progress.finish()
 
@@ -337,7 +333,7 @@ if __name__ == "__main__":
                 log("...Stopping...")
                 pass
             finally:
-                for t in [byte_timer, write_timer, draw_timer]:
+                for t in [draw_timer]:
                     log(t)
 
                 if profiler:

@@ -12,7 +12,7 @@ from gopro_overlay.widgets.gps import GPSLock
 from gopro_overlay.widgets.info import ComparativeEnergy
 from gopro_overlay.widgets.map import OutLine
 from gopro_overlay.widgets.text import CachingText, Text
-from gopro_overlay.widgets.widgets import simple_icon, Scene, Composite, Translate, Widget
+from gopro_overlay.widgets.widgets import simple_icon, Scene, Composite, Translate, Widget, SimpleFrameSupplier
 from tests.widgets import test_widgets_setup
 from tests.approval import approve_image
 from tests.testenvironment import is_make
@@ -210,10 +210,11 @@ def test_gps_lock():
 def time_rendering(name, widgets, dimensions: Dimension = Dimension(x=600, y=300), repeat=1):
     timer = PoorTimer(name)
 
-    scene = Scene(dimensions, widgets)
+    supplier = SimpleFrameSupplier(dimensions)
+    scene = Scene(widgets)
     draw = None
     for i in range(0, repeat):
-        draw = timer.time(lambda: scene.draw())
+        draw = timer.time(lambda: scene.draw(supplier.drawing_frame()))
 
     if not is_make():
         draw.show()

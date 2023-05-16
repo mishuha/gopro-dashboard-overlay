@@ -222,14 +222,26 @@ class Frame(Widget):
         image.alpha_composite(rect, (0, 0))
 
 
-class Scene:
+class FrameSupplier:
+    def drawing_frame(self) -> Image:
+        raise NotImplementedError()
 
-    def __init__(self, dimensions: Dimension, widgets: List[Widget]):
-        self._widgets = widgets
+
+class SimpleFrameSupplier(FrameSupplier):
+
+    def __init__(self, dimensions: Dimension):
         self._dimensions = dimensions
 
-    def draw(self) -> Image.Image:
-        image = Image.new("RGBA", (self._dimensions.x, self._dimensions.y), (0, 0, 0, 0))
+    def drawing_frame(self) -> Image:
+        return Image.new("RGBA", (self._dimensions.x, self._dimensions.y), (0, 0, 0, 0))
+
+
+class Scene:
+
+    def __init__(self, widgets: List[Widget]):
+        self._widgets = widgets
+
+    def draw(self, image: Image.Image) -> Image.Image:
         draw = ImageDraw.Draw(image)
 
         for w in self._widgets:

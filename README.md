@@ -7,7 +7,7 @@
 Discuss on [GitHub Discussions](https://github.com/time4tea/gopro-dashboard-overlay/discussions)
 
 - Overlaying exciting graphics onto GoPro videos with super-exact synchronization
-- *NEW & EXPERIMENTAL* Create videos from any GPX file - no GoPro required
+- Create videos from any GPX file - no GoPro required
 - Support multiple resolutions, most GoPro models, normal, timelapse & timewarp modes
 - Convert GoPro movie metadata to GPX or CSV files
 - Cut sections from GoPro movies (including metadata)
@@ -38,7 +38,7 @@ Almost 30 different map styles are supported! - See [map styles](docs/maps/READM
 ## Requirements
 
 
-- Python3.10
+- Python3.10 (development is done on Python3.11)
 - ffmpeg (you'll need the ffmpeg program installed)
 - libraqm (needed by [Pillow](https://pypi.org/project/Pillow/))
 - Unixy machine (probably, untested on Windows)
@@ -65,7 +65,7 @@ docker run -it -v "$(pwd):/work" overlaydash/gopro-dashboard-overlay:<version> <
 e.g.
 
 ```shell
-docker run -it -v "$(pwd):/work" overlaydash/gopro-dashboard-overlay:0.81.0 gopro-dashboard.py GH010122.MP4 render/docker.MP4
+docker run -it -v "$(pwd):/work" overlaydash/gopro-dashboard-overlay:0.92.0 gopro-dashboard.py GH010122.MP4 render/docker.MP4
 ```
 
 Files created by the program will be created with the same uid that owns the mapped directory.
@@ -185,7 +185,7 @@ You can cut a section of the gopro file, with metadata.
 
 ## Known Bugs / Issues
 
-- Only tested on a GoPro Hero 9, that's all I have. Sample files for other devices are welcomed.
+- Only tested on a GoPro Hero 9/11, that's all I have. Sample files for other devices are welcomed.
 
 ## Icons
 
@@ -216,6 +216,8 @@ https://github.com/JuanIrache/gopro-telemetry
 ## Latest Changes
 
 If you find any issues with new releases, please discuss in [GitHub Discussions](https://github.com/time4tea/gopro-dashboard-overlay/discussions)
+- 0.92.0 [Feature] `--double-buffer` - EXPERIMENTAL double-buffering. Potentially much faster rendering, but may not work on all architectures. Speed improvements highly dependent on `ffmpeg` performance. Likely much faster when using `--generate overlay`. Feedback welcomed.
+- 0.91.0 [Fix] Ignore FIT data items that don't have a GPS location. [#122](https://github.com/time4tea/gopro-dashboard-overlay/issues/122) Thanks [@patkoscsaba](https://github.com/patkoscsaba) for raising.
 - 0.90.0 [Change] `cairo-circuit` now draws much more quickly. 
 - [Change] Map rendering caches tile images more efficiently, so draws more quickly.
 - 0.89.0 [Feature] New component `cairo-gauge-round-annotated` - A bit like a car speedometer - See docs [docs/xml/examples/06-cairo-gauge-round-annotated](docs/xml/examples/06-cairo-gauge-round-annotated)

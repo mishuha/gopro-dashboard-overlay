@@ -13,6 +13,7 @@ from gopro_overlay.layout import Overlay
 from gopro_overlay.layout_xml import layout_from_xml
 from gopro_overlay.privacy import NoPrivacyZone
 from gopro_overlay.units import units
+from gopro_overlay.widgets.widgets import SimpleFrameSupplier
 
 mydir = os.path.dirname(__file__)
 
@@ -113,8 +114,9 @@ if __name__ == "__main__":
                     privacy=NoPrivacyZone()
                 )
 
-                overlay = Overlay(dimensions_for(filepath), framemeta=timeseries, create_widgets=layout)
-                image = overlay.draw(timeseries.mid)
+                overlay = Overlay(framemeta=timeseries, create_widgets=layout)
+                supplier = SimpleFrameSupplier(dimensions_for(filepath))
+                image = overlay.draw(timeseries.mid, supplier.drawing_frame())
 
                 os.makedirs(example_dest, exist_ok=True)
 
